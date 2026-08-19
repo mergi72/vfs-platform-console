@@ -57,11 +57,34 @@
     },
     {
       "id": "logdy",
-      "name": "Logdy",
-      "enabled": false,
+      "name": "VFS Debugger (Logdy)",
+      "enabled": true,
       "kind": "debugger",
-      "runtime": "Local web log viewer",
+      "runtime": "Logdy 0.17.1 / local web UI",
+      "project_path": "%USERPROFILE%\\python_projects\\logdy-core",
       "base_url": "http://127.0.0.1:8801",
+      "health_path": "/",
+      "source": {
+        "repository": "https://github.com/logdyhq/logdy-core",
+        "tag": "v0.17.1",
+        "license": "Apache-2.0"
+      },
+      "launch": {
+        "executable": "%USERPROFILE%\\python_projects\\logdy-core\\bin\\logdy.exe",
+        "arguments": [
+          "follow",
+          "--ui-ip", "127.0.0.1",
+          "--port", "8801",
+          "--no-analytics",
+          "--no-updates",
+          "--max-message-count", "10000"
+        ],
+        "log_sources": [
+          "%APPDATA%\\DMS Provider\\logs\\bridge.log",
+          "%APPDATA%\\DMS Provider\\logs\\bridge-debug.log",
+          "%APPDATA%\\DMS Provider\\logs\\*-debug.log"
+        ]
+      },
       "order": 60
     }
   ]
