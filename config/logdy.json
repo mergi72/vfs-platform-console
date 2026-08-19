@@ -2,6 +2,14 @@
   "name": "VFS Platform Logs",
   "columns": [
     {
+      "id": "correlation_id",
+      "name": "ID",
+      "width": 150,
+      "hidden": false,
+      "faceted": true,
+      "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.correlation_id || \"-\" })"
+    },
+    {
       "id": "timestamp",
       "name": "Čas",
       "width": 180,
@@ -20,7 +28,7 @@
     {
       "id": "component",
       "name": "Komponenta",
-      "width": 330,
+      "width": 125,
       "hidden": false,
       "faceted": true,
       "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.component || line.origin?.file || \"-\" })"
@@ -43,7 +51,7 @@
       {
         "id": "python-log-parser",
         "name": "Python log parser",
-        "handlerTsCode": "(line: Message): Message => { const clean = line.content.replace(/\\x1b\\[[0-9;]*m/g, '').trim(); const sourceFile = (line.origin?.file || 'unknown').replace(/^.*[\\\\/]/, ''); const sourceComponent = /^(wfx-|progress-debug\\.log$)/i.test(sourceFile) ? 'tc-wfx' : (sourceFile.replace(/\\.(stdout|stderr)\\.log$/i, '').replace(/-debug\\.log$/i, '').replace(/\\.log$/i, '') || 'unknown'); const app = clean.match(/^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+(.+?):\\s+(.*)$/); if (app) { line.json_content = { timestamp: app[1], level: app[2], component: sourceComponent, message: app[4] }; line.order_key = Date.parse(app[1].replace(' ', 'T').replace(',', '.')); return line; } const server = clean.match(/^(DEBUG|INFO|WARNING|ERROR|CRITICAL):\\s*(.*)$/); const date = new Date(line.ts); const pad = (value: number, length = 2): string => String(value).padStart(length, '0'); const received = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())},${pad(date.getMilliseconds(), 3)}`; line.json_content = server ? { timestamp: received, level: server[1], component: sourceComponent, message: server[2] } : { timestamp: received, level: 'LOG', component: sourceComponent, message: clean }; line.order_key = line.ts; return line; }"
+        "handlerTsCode": "(line: Message): Message => { const clean = line.content.replace(/\\x1b\\[[0-9;]*m/g, '').trim(); const sourceFile = (line.origin?.file || 'unknown').replace(/^.*[\\\\/]/, ''); const sourceComponent = /^(wfx-|progress-debug\\.log$)/i.test(sourceFile) ? 'tc-wfx' : (sourceFile.replace(/\\.(stdout|stderr)\\.log$/i, '').replace(/-debug\\.log$/i, '').replace(/\\.log$/i, '') || 'unknown'); const correlation = clean.match(/(?:^|\\s)correlation_id=([0-9a-f]{8}-[0-9a-f-]{27})(?:\\s|$)/i); const correlationId = correlation ? correlation[1].slice(0, 8) : '-'; const app = clean.match(/^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+(.+?):\\s+(.*)$/); if (app) { line.json_content = { correlation_id: correlationId, timestamp: app[1], level: app[2], component: sourceComponent, message: app[4] }; line.order_key = Date.parse(app[1].replace(' ', 'T').replace(',', '.')); return line; } const server = clean.match(/^(DEBUG|INFO|WARNING|ERROR|CRITICAL):\\s*(.*)$/); const date = new Date(line.ts); const pad = (value: number, length = 2): string => String(value).padStart(length, '0'); const received = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())},${pad(date.getMilliseconds(), 3)}`; line.json_content = server ? { correlation_id: correlationId, timestamp: received, level: server[1], component: sourceComponent, message: server[2] } : { correlation_id: correlationId, timestamp: received, level: 'LOG', component: sourceComponent, message: clean }; line.order_key = line.ts; return line; }"
       }
     ]
   }

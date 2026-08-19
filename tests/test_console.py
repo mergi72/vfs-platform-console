@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.0"
+    assert settings["application"]["version"] == "0.3.1"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -69,14 +69,17 @@ def test_logdy_layout_is_configured() -> None:
     config_path = Path(__file__).resolve().parents[1] / "config" / "logdy.json"
     layout = json.loads(config_path.read_text(encoding="utf-8"))
     assert [column["name"] for column in layout["columns"]] == [
+        "ID",
         "Čas",
         "Level",
         "Komponenta",
         "Zpráva",
     ]
+    assert layout["columns"][3]["width"] == 125
     assert layout["settings"]["middlewares"][0]["name"] == "Python log parser"
     parser = layout["settings"]["middlewares"][0]["handlerTsCode"]
     assert "component: sourceComponent" in parser
+    assert "correlation_id: correlationId" in parser
     assert "? 'tc-wfx'" in parser
     assert "replace(/\\.(stdout|stderr)\\.log$/i, '')" in parser
     assert "replace(/-debug\\.log$/i, '')" in parser
@@ -146,7 +149,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.0" in response.text
+    assert "0.3.1" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
