@@ -1,0 +1,50 @@
+{
+  "name": "VFS Platform Logs",
+  "columns": [
+    {
+      "id": "timestamp",
+      "name": "Čas",
+      "width": 180,
+      "hidden": false,
+      "faceted": false,
+      "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.timestamp || \"-\" })"
+    },
+    {
+      "id": "level",
+      "name": "Level",
+      "width": 90,
+      "hidden": false,
+      "faceted": true,
+      "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.level || \"-\" })"
+    },
+    {
+      "id": "component",
+      "name": "Komponenta",
+      "width": 330,
+      "hidden": false,
+      "faceted": true,
+      "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.component || line.origin?.file || \"-\" })"
+    },
+    {
+      "id": "message",
+      "name": "Zpráva",
+      "width": 850,
+      "hidden": false,
+      "faceted": false,
+      "handlerTsCode": "(line: Message): CellHandler => ({ text: line.json_content?.message || line.content || \"-\" })"
+    }
+  ],
+  "settings": {
+    "leftColWidth": 300,
+    "drawerColWidth": 900,
+    "maxMessages": 10000,
+    "entriesOrder": "desc",
+    "middlewares": [
+      {
+        "id": "python-log-parser",
+        "name": "Python log parser",
+        "handlerTsCode": "(line: Message): Message => { const clean = line.content.replace(/\\x1b\\[[0-9;]*m/g, '').trim(); const app = clean.match(/^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+(.+?):\\s+(.*)$/); if (app) { line.json_content = { timestamp: app[1], level: app[2], component: app[3], message: app[4] }; line.order_key = Date.parse(app[1].replace(' ', 'T').replace(',', '.')); return line; } const server = clean.match(/^(DEBUG|INFO|WARNING|ERROR|CRITICAL):\\s*(.*)$/); const date = new Date(line.ts); const pad = (value: number, length = 2): string => String(value).padStart(length, '0'); const received = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())},${pad(date.getMilliseconds(), 3)}`; const origin = (line.origin?.file || 'unknown').replace(/^.*[\\\\/]/, '').replace(/\\.(stdout|stderr)?\\.?log$/i, '') || 'unknown'; line.json_content = server ? { timestamp: received, level: server[1], component: 'uvicorn', message: server[2] } : { timestamp: received, level: 'LOG', component: origin, message: clean }; line.order_key = line.ts; return line; }"
+      }
+    ]
+  }
+}
