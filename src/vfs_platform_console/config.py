@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -61,5 +62,10 @@ def _expand_values(value: Any) -> Any:
     if isinstance(value, list):
         return [_expand_values(item) for item in value]
     if isinstance(value, str):
-        return os.path.expandvars(value)
+        expanded = os.path.expandvars(value)
+        return re.sub(
+            r"%([^%]+)%",
+            lambda match: os.getenv(match.group(1), str(Path.home()) if match.group(1) == "USERPROFILE" else match.group(0)),
+            expanded,
+        )
     return value
