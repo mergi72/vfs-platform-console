@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import glob
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -36,7 +37,8 @@ def debugger_command(packages: list[dict[str, Any]] | None = None) -> list[str]:
 
 
 def main() -> None:
-    subprocess.run(debugger_command(), check=True)
+    creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    subprocess.run(debugger_command(), check=True, creationflags=creationflags)
 
 
 if __name__ == "__main__":

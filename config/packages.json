@@ -89,7 +89,11 @@
           "%APPDATA%\\DMS MCP\\logs\\mcp.log",
           "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log",
           "%APPDATA%\\DMS AI Client\\logs\\demi.log",
-          "%APPDATA%\\DMS AI Client\\logs\\demi-debug.log"
+          "%APPDATA%\\DMS AI Client\\logs\\demi-debug.log",
+          "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-init.log",
+          "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-default-params.log",
+          "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-status.log",
+          "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\progress-debug.log"
         ]
       },
       "order": 1

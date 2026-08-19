@@ -2,7 +2,7 @@
   "application": {
     "id": "vfs-platform-console",
     "name": "VFS Platform Console",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "description": "Modulární přehled komponent VFS Platformy"
   },
   "server": {

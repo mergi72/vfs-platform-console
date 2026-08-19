@@ -1,17 +1,20 @@
 import json
+import os
 from pathlib import Path
+import subprocess
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from vfs_platform_console.app import create_app
 from vfs_platform_console.config import load_config, load_packages
-from vfs_platform_console.debugger import debugger_command
+from vfs_platform_console.debugger import debugger_command, main as debugger_main
 
 
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.2.7"
+    assert settings["application"]["version"] == "0.2.8"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -31,6 +34,7 @@ def test_packages_are_enabled_and_ordered() -> None:
     assert log_sources[5].replace("\\", "/").endswith("DMS MCP/logs/mcp-debug.log")
     assert log_sources[6].replace("\\", "/").endswith("DMS AI Client/logs/demi.log")
     assert log_sources[7].replace("\\", "/").endswith("DMS AI Client/logs/demi-debug.log")
+    assert all("GHISLER/Plugins/wfx/TcWfxPlugin/logs/" in item.replace("\\", "/") for item in log_sources[8:12])
 
 
 def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
@@ -42,6 +46,15 @@ def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
         [{"kind": "debugger", "launch": {"executable": str(executable), "arguments": ["follow", "--full-read"], "log_sources": [str(log_file)]}}]
     )
     assert command == [str(executable), "follow", "--full-read", str(log_file)]
+
+
+def test_debugger_launcher_hides_windows_console() -> None:
+    with patch("vfs_platform_console.debugger.debugger_command", return_value=["logdy"]), patch(
+        "vfs_platform_console.debugger.subprocess.run"
+    ) as run:
+        debugger_main()
+    expected_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    run.assert_called_once_with(["logdy"], check=True, creationflags=expected_flags)
 
 
 def test_logdy_layout_is_configured() -> None:
@@ -60,6 +73,7 @@ def test_logdy_layout_is_configured() -> None:
     assert layout["settings"]["middlewares"][0]["name"] == "Python log parser"
     parser = layout["settings"]["middlewares"][0]["handlerTsCode"]
     assert "component: sourceComponent" in parser
+    assert "? 'tc-wfx'" in parser
     assert "replace(/\\.(stdout|stderr)\\.log$/i, '')" in parser
     assert "replace(/-debug\\.log$/i, '')" in parser
     assert "date.getFullYear()" in parser
@@ -79,7 +93,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.2.7" in response.text
+    assert "0.2.8" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
