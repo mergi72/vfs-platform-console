@@ -11,7 +11,7 @@ from vfs_platform_console.debugger import debugger_command
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.2.2"
+    assert settings["application"]["version"] == "0.2.3"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -52,7 +52,7 @@ def test_logdy_layout_is_configured() -> None:
     ]
     assert layout["settings"]["middlewares"][0]["name"] == "Python log parser"
     parser = layout["settings"]["middlewares"][0]["handlerTsCode"]
-    assert "component: 'uvicorn'" in parser
+    assert parser.count("component: 'bridge'") == 2
     assert "date.getFullYear()" in parser
     assert "date.getMilliseconds()" in parser
     assert "return;" not in parser
@@ -70,7 +70,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.2.2" in response.text
+    assert "0.2.3" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
