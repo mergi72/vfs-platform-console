@@ -6,16 +6,17 @@ import httpx
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from . import __version__
 from .config import load_config, load_packages
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="VFS Platform Console", version=__version__)
+    settings = load_config()
+    application = settings["application"]
+    app = FastAPI(title=str(application["name"]), version=str(application["version"]))
 
     @app.get("/health")
     def health() -> dict[str, Any]:
-        return {"ok": True, "service": "vfs-platform-console", "version": __version__}
+        return {"ok": True, "service": application["id"], "version": application["version"]}
 
     @app.get("/api/packages")
     def packages() -> dict[str, Any]:
@@ -23,11 +24,14 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
+        server = settings["server"]
+        console_endpoint = f"{server['host']}:{server['port']}"
         return f"""<!doctype html>
 <html lang=\"cs\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">
-<title>VFS Platform Console</title><style>
+<title>{application['name']}</title><style>
 body{{margin:0;background:#0d1620;color:#e8eef5;font-family:Segoe UI,Arial,sans-serif}}
-header{{padding:28px 5%;background:#152231;border-bottom:1px solid #304154}}
+header{{padding:22px 5%;background:#152231;border-bottom:1px solid #304154}}.console-info{{display:flex;gap:18px;flex-wrap:wrap;color:#aac0d5;font-size:.88rem}}
+header h1{{margin:0 0 8px}}.console-info strong{{color:#e8eef5}}.self-healthy{{color:#65df8a;font-weight:600}}
 main{{padding:28px 5%}}.layout{{display:grid;grid-template-columns:minmax(420px,1.4fr) minmax(300px,1fr);gap:20px}}
 #overview{{width:100%;border-collapse:collapse;background:#132232}}
 #overview th,#overview td{{padding:10px 12px;border-bottom:1px solid #30465b;text-align:left;vertical-align:top}}
@@ -39,7 +43,7 @@ main{{padding:28px 5%}}.layout{{display:grid;grid-template-columns:minmax(420px,
 .meta{{display:grid;grid-template-columns:72px 1fr;gap:7px;margin:16px 0;font-size:.88rem}}.label{{color:#8fa4b8}}
 .value{{overflow-wrap:anywhere}}a{{color:#6db7ff;margin-right:14px}}
 @media(max-width:850px){{.layout{{grid-template-columns:1fr}}}}
-</style></head><body><header><h1>VFS Platform Console</h1><div>Modulární přehled komponent VFS Platformy</div></header>
+</style></head><body><header><h1>{application['name']}</h1><div>{application['description']}</div><div class=\"console-info\"><span class=\"self-healthy\">● healthy</span><span>Version <strong>{application['version']}</strong></span><span>Endpoint <strong>{console_endpoint}</strong></span></div></header>
 <main><div class=\"layout\"><table id=\"overview\"><thead><tr><th>Komponenta</th><th>Stav</th><th>Endpoint</th></tr></thead><tbody><tr><td colspan=\"3\">Načítám komponenty…</td></tr></tbody></table>
 <section id=\"detail\" class=\"card\">Vyber komponentu.</section></div></main>
 <script>

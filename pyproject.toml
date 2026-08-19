@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vfs-platform-console"
-version = "0.1.0"
+version = "0.1.1"
 description = "Modular web console for VFS Platform components."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,4 +28,3 @@ pythonpath = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vfs_platform_console"]
-
