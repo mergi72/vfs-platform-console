@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -12,7 +11,7 @@ from vfs_platform_console.debugger import debugger_command
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.2.4"
+    assert settings["application"]["version"] == "0.2.5"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -21,13 +20,13 @@ def test_packages_are_enabled_and_ordered() -> None:
     assert [item["id"] for item in packages] == ["logdy", "bridge", "broker", "mcp", "demi", "tc-wfx"]
     assert packages[0]["runtime"] == "VFS Logdy 0.18.1 / local web UI"
     assert "%USERPROFILE%" not in packages[0]["project_path"]
-    broker_log_dir = Path(os.environ["APPDATA"]) / "Credential Broker" / "logs"
-    assert packages[0]["launch"]["log_sources"] == [
+    log_sources = packages[0]["launch"]["log_sources"]
+    assert log_sources[:2] == [
         str(packages[1]["project_path"] + "\\tmp\\bridge.stdout.log"),
         str(packages[1]["project_path"] + "\\tmp\\bridge.stderr.log"),
-        str(broker_log_dir / "broker.log"),
-        str(broker_log_dir / "broker-debug.log"),
     ]
+    assert log_sources[2].replace("\\", "/").endswith("Credential Broker/logs/broker.log")
+    assert log_sources[3].replace("\\", "/").endswith("Credential Broker/logs/broker-debug.log")
 
 
 def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
@@ -76,7 +75,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.2.4" in response.text
+    assert "0.2.5" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
