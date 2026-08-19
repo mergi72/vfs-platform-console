@@ -1,0 +1,68 @@
+{
+  "packages": [
+    {
+      "id": "bridge",
+      "name": "VFS Provider Bridge",
+      "enabled": true,
+      "kind": "service",
+      "runtime": "FastAPI / HTTP",
+      "project_path": "%USERPROFILE%\\python_projects\\dms-provider-bridge",
+      "base_url": "http://127.0.0.1:8765",
+      "health_path": "/health",
+      "config_path": "/config",
+      "docs_path": "/docs",
+      "order": 10
+    },
+    {
+      "id": "broker",
+      "name": "Credential Broker",
+      "enabled": true,
+      "kind": "service",
+      "runtime": "HTTP service",
+      "project_path": "%USERPROFILE%\\python_projects\\credential-broker",
+      "base_url": "http://127.0.0.1:8776",
+      "health_path": "/health",
+      "order": 20
+    },
+    {
+      "id": "mcp",
+      "name": "VFS MCP Server",
+      "enabled": true,
+      "kind": "service",
+      "runtime": "MCP over HTTP",
+      "project_path": "%USERPROFILE%\\python_projects\\dms-mcp-server",
+      "base_url": "http://127.0.0.1:8781",
+      "health_path": "/health",
+      "order": 30
+    },
+    {
+      "id": "demi",
+      "name": "Demi",
+      "enabled": true,
+      "kind": "application",
+      "runtime": "FastAPI / Web UI",
+      "project_path": "%USERPROFILE%\\python_projects\\dms-ai-client",
+      "base_url": "http://127.0.0.1:8790",
+      "health_path": "/health",
+      "order": 40
+    },
+    {
+      "id": "tc-wfx",
+      "name": "TC-WFX",
+      "enabled": true,
+      "kind": "client",
+      "runtime": "Total Commander WFX plugin",
+      "project_path": "%USERPROFILE%\\python_projects\\tc-wfx-plugin",
+      "order": 50
+    },
+    {
+      "id": "logdy",
+      "name": "Logdy",
+      "enabled": false,
+      "kind": "debugger",
+      "runtime": "Local web log viewer",
+      "base_url": "http://127.0.0.1:8801",
+      "order": 60
+    }
+  ]
+}
