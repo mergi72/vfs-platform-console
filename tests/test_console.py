@@ -11,7 +11,7 @@ from vfs_platform_console.debugger import debugger_command
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.2.1"
+    assert settings["application"]["version"] == "0.2.2"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -40,7 +40,9 @@ def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
 def test_logdy_layout_is_configured() -> None:
     debugger = next(item for item in load_packages() if item["id"] == "logdy")
     arguments = debugger["launch"]["arguments"]
-    config_path = Path(arguments[arguments.index("--config") + 1])
+    configured_path = arguments[arguments.index("--config") + 1]
+    assert configured_path.replace("\\", "/").endswith("/vfs-platform-console/config/logdy.json")
+    config_path = Path(__file__).resolve().parents[1] / "config" / "logdy.json"
     layout = json.loads(config_path.read_text(encoding="utf-8"))
     assert [column["name"] for column in layout["columns"]] == [
         "Čas",
@@ -68,7 +70,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.2.1" in response.text
+    assert "0.2.2" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
