@@ -87,7 +87,9 @@
           "%APPDATA%\\Credential Broker\\logs\\broker.log",
           "%APPDATA%\\Credential Broker\\logs\\broker-debug.log",
           "%APPDATA%\\DMS MCP\\logs\\mcp.log",
-          "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log"
+          "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log",
+          "%APPDATA%\\DMS AI Client\\logs\\demi.log",
+          "%APPDATA%\\DMS AI Client\\logs\\demi-debug.log"
         ]
       },
       "order": 1
