@@ -1,5 +1,9 @@
 # VFS Platform Console
 
+[![CI](https://github.com/mergi72/vfs-platform-console/actions/workflows/ci.yml/badge.svg)](https://github.com/mergi72/vfs-platform-console/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-%3E%3D3.11-blue)](https://www.python.org/)
+[![Release](https://img.shields.io/github/v/release/mergi72/vfs-platform-console?label=Release&color=blueviolet)](https://github.com/mergi72/vfs-platform-console/releases/latest)
+
 Modular FastAPI web console for discovering and viewing VFS Platform components.
 
 The console does not own Bridge, Broker, MCP, Demi, or TC-WFX. Components remain independently deployable and are registered through `config/packages.json`.
