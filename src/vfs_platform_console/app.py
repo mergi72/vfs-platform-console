@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
+import psutil
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -58,6 +62,10 @@ fetch('/api/packages').then(r => r.json()).then(data => {{
     document.getElementById('detail').innerHTML = `<div class=\"head\"><span class=\"kind\">${{esc(p.kind)}}</span>
     <span class=\"status ${{esc(p.status)}}\">${{esc(p.status)}}</span></div><h2>${{esc(p.name)}}</h2>
     <div class=\"meta\"><span class=\"label\">Runtime</span><span class=\"value\">${{esc(p.runtime || 'neuvedeno')}}</span>
+    <span class=\"label\">Verze</span><span class=\"value\">${{esc(p.version || 'neuvedena')}}</span>
+    <span class=\"label\">Spuštěno</span><span class=\"value\">${{esc(formatStartedAt(p.started_at))}}</span>
+    ${{p.installed === undefined ? '' : `<span class=\"label\">Instalace</span><span class=\"value\">${{p.installed ? 'nainstalován' : 'nenainstalován'}}</span>`}}
+    ${{p.loaded === undefined ? '' : `<span class=\"label\">Načten</span><span class=\"value\">${{p.loaded ? 'ano' : 'ne'}}</span>`}}
     <span class=\"label\">Endpoint</span><span class=\"value\">${{esc(p.base_url || 'lokální klient')}}</span>
     <span class=\"label\">Projekt</span><span class=\"value\">${{esc(p.project_path || 'externí balíček')}}</span></div>
     ${{links(p)}}`;
@@ -72,6 +80,11 @@ function links(p) {{
     out += `<a href=\"${{esc(p.base_url.replace(/[/]$/, '') + '/' + p[key].replace(/^[/]/, ''))}}\" target=\"_blank\" rel=\"noopener\">${{label}}</a>`;
   return out;
 }}
+function formatStartedAt(value) {{
+  if (!value) return 'nelze zjistit';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('cs-CZ');
+}}
 </script></body></html>"""
 
     return app
@@ -79,10 +92,12 @@ function links(p) {{
 
 def _package_status(package: dict[str, Any]) -> dict[str, Any]:
     result = dict(package)
+    result.update(_installation_status(package.get("installation"), package.get("process_names")))
     base_url = package.get("base_url")
     health_path = package.get("health_path")
     if not isinstance(base_url, str) or not isinstance(health_path, str):
         result["status"] = "not_applicable"
+        result["started_at"] = _named_process_started_at(package.get("process_names"))
         return result
     timeout = float(load_config().get("health", {}).get("timeout_seconds", 2.0))
     try:
@@ -90,6 +105,119 @@ def _package_status(package: dict[str, Any]) -> dict[str, Any]:
             response = client.get(base_url.rstrip("/") + "/" + health_path.lstrip("/"))
         result["status"] = "healthy" if response.is_success else "unhealthy"
         result["status_code"] = response.status_code
+        if response.is_success:
+            try:
+                health = response.json()
+            except ValueError:
+                health = None
+            if isinstance(health, dict):
+                version = health.get("version")
+                if isinstance(version, str) and version:
+                    result["version"] = version
+                started_at = health.get("started_at")
+                if isinstance(started_at, str) and started_at:
+                    result["started_at"] = started_at
+        if "started_at" not in result:
+            result["started_at"] = _process_started_at(base_url)
     except httpx.HTTPError:
         result["status"] = "offline"
     return result
+
+
+def _process_started_at(base_url: str) -> str | None:
+    parsed = urlparse(base_url)
+    if parsed.hostname not in {"127.0.0.1", "localhost", "::1"} or parsed.port is None:
+        return None
+    try:
+        connections = psutil.net_connections(kind="tcp")
+    except (psutil.AccessDenied, psutil.Error):
+        return None
+    for connection in connections:
+        if connection.status != psutil.CONN_LISTEN or connection.pid is None:
+            continue
+        if getattr(connection.laddr, "port", None) != parsed.port:
+            continue
+        try:
+            started = psutil.Process(connection.pid).create_time()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.Error):
+            return None
+        return datetime.fromtimestamp(started, tz=timezone.utc).isoformat()
+    return None
+
+
+def _named_process_started_at(process_names: Any) -> str | None:
+    if not isinstance(process_names, list):
+        return None
+    configured = {name.casefold() for name in process_names if isinstance(name, str) and name}
+    if not configured:
+        return None
+    started: list[float] = []
+    for process in psutil.process_iter(["name", "create_time"]):
+        try:
+            name = process.info.get("name")
+            created = process.info.get("create_time")
+            if isinstance(name, str) and name.casefold().removesuffix(".exe") in configured and isinstance(created, (int, float)):
+                started.append(float(created))
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.Error):
+            continue
+    if not started:
+        return None
+    return datetime.fromtimestamp(max(started), tz=timezone.utc).isoformat()
+
+
+def _installation_status(installation: Any, process_names: Any) -> dict[str, Any]:
+    if not isinstance(installation, dict):
+        return {}
+    artifact = installation.get("artifact_path")
+    registry_file = installation.get("registry_file")
+    registry_section = installation.get("registry_section")
+    registry_key = installation.get("registry_key")
+    registered_path = _ini_value(registry_file, registry_section, registry_key)
+    artifact_exists = isinstance(artifact, str) and Path(artifact).is_file()
+    registered = isinstance(registered_path, str) and bool(registered_path)
+    result: dict[str, Any] = {
+        "installed": registered and artifact_exists,
+        "registered": registered,
+        "artifact_exists": artifact_exists,
+    }
+    module_name = installation.get("module_name")
+    if isinstance(module_name, str) and module_name:
+        result["loaded"] = _module_is_loaded(process_names, module_name)
+    return result
+
+
+def _ini_value(path: Any, section: Any, key: Any) -> str | None:
+    if not all(isinstance(value, str) and value for value in (path, section, key)):
+        return None
+    ini_path = Path(path)
+    if not ini_path.is_file():
+        return None
+    text = ini_path.read_bytes().decode("utf-8", errors="replace")
+    active_section: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            active_section = line[1:-1]
+            continue
+        if active_section == section and "=" in line:
+            candidate, value = line.split("=", 1)
+            if candidate.strip() == key:
+                return value.strip()
+    return None
+
+
+def _module_is_loaded(process_names: Any, module_name: str) -> bool:
+    if not isinstance(process_names, list):
+        return False
+    configured = {name.casefold() for name in process_names if isinstance(name, str) and name}
+    expected = module_name.casefold()
+    for process in psutil.process_iter(["name"]):
+        try:
+            name = process.info.get("name")
+            if not isinstance(name, str) or name.casefold().removesuffix(".exe") not in configured:
+                continue
+            if any(Path(mapping.path).name.casefold() == expected for mapping in process.memory_maps()):
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.Error):
+            continue
+    return False

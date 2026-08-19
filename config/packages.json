@@ -52,6 +52,15 @@
       "enabled": true,
       "kind": "client",
       "runtime": "Total Commander WFX plugin",
+      "version": "1.1.0",
+      "process_names": ["TOTALCMD64", "TOTALCMD"],
+      "installation": {
+        "registry_file": "%APPDATA%\\GHISLER\\wincmd.ini",
+        "registry_section": "FileSystemPlugins",
+        "registry_key": "TC-VFS",
+        "artifact_path": "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\TcWfxPlugin.wfx64",
+        "module_name": "TcWfxPlugin.wfx64"
+      },
       "project_path": "%USERPROFILE%\\python_projects\\tc-wfx-plugin",
       "order": 50
     },
@@ -61,6 +70,7 @@
       "enabled": true,
       "kind": "debugger",
       "runtime": "VFS Logdy 0.18.1 / local web UI",
+      "version": "0.18.1",
       "project_path": "%USERPROFILE%\\python_projects\\logdy-core",
       "base_url": "http://127.0.0.1:8801",
       "health_path": "/",
