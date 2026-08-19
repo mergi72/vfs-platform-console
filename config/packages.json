@@ -85,7 +85,9 @@
           "%USERPROFILE%\\python_projects\\dms-provider-bridge\\tmp\\bridge.stdout.log",
           "%USERPROFILE%\\python_projects\\dms-provider-bridge\\tmp\\bridge.stderr.log",
           "%APPDATA%\\Credential Broker\\logs\\broker.log",
-          "%APPDATA%\\Credential Broker\\logs\\broker-debug.log"
+          "%APPDATA%\\Credential Broker\\logs\\broker-debug.log",
+          "%APPDATA%\\DMS MCP\\logs\\mcp.log",
+          "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log"
         ]
       },
       "order": 1

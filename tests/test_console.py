@@ -11,7 +11,7 @@ from vfs_platform_console.debugger import debugger_command
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.2.5"
+    assert settings["application"]["version"] == "0.2.6"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -27,6 +27,8 @@ def test_packages_are_enabled_and_ordered() -> None:
     ]
     assert log_sources[2].replace("\\", "/").endswith("Credential Broker/logs/broker.log")
     assert log_sources[3].replace("\\", "/").endswith("Credential Broker/logs/broker-debug.log")
+    assert log_sources[4].replace("\\", "/").endswith("DMS MCP/logs/mcp.log")
+    assert log_sources[5].replace("\\", "/").endswith("DMS MCP/logs/mcp-debug.log")
 
 
 def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
@@ -75,7 +77,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.2.5" in response.text
+    assert "0.2.6" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
