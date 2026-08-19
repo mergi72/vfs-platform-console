@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.1"
+    assert settings["application"]["version"] == "0.3.2"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -28,17 +28,11 @@ def test_packages_are_enabled_and_ordered() -> None:
     assert packages[-1]["installation"]["registry_key"] == "TC-VFS"
     assert "%USERPROFILE%" not in packages[0]["project_path"]
     log_sources = packages[0]["launch"]["log_sources"]
-    assert log_sources[:2] == [
-        str(packages[1]["project_path"] + "\\tmp\\bridge.stdout.log"),
-        str(packages[1]["project_path"] + "\\tmp\\bridge.stderr.log"),
-    ]
-    assert log_sources[2].replace("\\", "/").endswith("Credential Broker/logs/broker.log")
-    assert log_sources[3].replace("\\", "/").endswith("Credential Broker/logs/broker-debug.log")
-    assert log_sources[4].replace("\\", "/").endswith("DMS MCP/logs/mcp.log")
-    assert log_sources[5].replace("\\", "/").endswith("DMS MCP/logs/mcp-debug.log")
-    assert log_sources[6].replace("\\", "/").endswith("DMS AI Client/logs/demi.log")
-    assert log_sources[7].replace("\\", "/").endswith("DMS AI Client/logs/demi-debug.log")
-    assert all("GHISLER/Plugins/wfx/TcWfxPlugin/logs/" in item.replace("\\", "/") for item in log_sources[8:12])
+    assert log_sources[0]["alternatives"][0].replace("\\", "/").endswith("DMS Provider/logs/bridge-debug.log")
+    assert log_sources[1]["alternatives"][0].replace("\\", "/").endswith("Credential Broker/logs/broker-debug.log")
+    assert log_sources[2]["alternatives"][0].replace("\\", "/").endswith("DMS MCP/logs/mcp-debug.log")
+    assert log_sources[3]["alternatives"][0].replace("\\", "/").endswith("DMS AI Client/logs/demi-debug.log")
+    assert all("GHISLER/Plugins/wfx/TcWfxPlugin/logs/" in item.replace("\\", "/") for item in log_sources[4:8])
 
 
 def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
@@ -50,6 +44,28 @@ def test_debugger_command_comes_from_package_manifest(tmp_path) -> None:
         [{"kind": "debugger", "launch": {"executable": str(executable), "arguments": ["follow", "--full-read"], "log_sources": [str(log_file)]}}]
     )
     assert command == [str(executable), "follow", "--full-read", str(log_file)]
+
+
+def test_debugger_command_chooses_newest_log_alternative(tmp_path) -> None:
+    executable = tmp_path / "logdy.exe"
+    normal_log = tmp_path / "service.log"
+    debug_log = tmp_path / "service-debug.log"
+    executable.write_bytes(b"")
+    debug_log.write_text("old debug", encoding="utf-8")
+    normal_log.write_text("current normal", encoding="utf-8")
+    os.utime(debug_log, (1, 1))
+    os.utime(normal_log, (2, 2))
+    command = debugger_command(
+        [{
+            "kind": "debugger",
+            "launch": {
+                "executable": str(executable),
+                "arguments": ["follow"],
+                "log_sources": [{"alternatives": [str(debug_log), str(normal_log)]}],
+            },
+        }]
+    )
+    assert command == [str(executable), "follow", str(normal_log)]
 
 
 def test_debugger_launcher_hides_windows_console() -> None:
@@ -149,7 +165,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.1" in response.text
+    assert "0.3.2" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text

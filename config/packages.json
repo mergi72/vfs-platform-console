@@ -92,14 +92,31 @@
           "--max-message-count", "10000"
         ],
         "log_sources": [
-          "%USERPROFILE%\\python_projects\\dms-provider-bridge\\tmp\\bridge.stdout.log",
-          "%USERPROFILE%\\python_projects\\dms-provider-bridge\\tmp\\bridge.stderr.log",
-          "%APPDATA%\\Credential Broker\\logs\\broker.log",
-          "%APPDATA%\\Credential Broker\\logs\\broker-debug.log",
-          "%APPDATA%\\DMS MCP\\logs\\mcp.log",
-          "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log",
-          "%APPDATA%\\DMS AI Client\\logs\\demi.log",
-          "%APPDATA%\\DMS AI Client\\logs\\demi-debug.log",
+          {
+            "alternatives": [
+              "%APPDATA%\\DMS Provider\\logs\\bridge-debug.log",
+              "%APPDATA%\\DMS Provider\\logs\\bridge.log",
+              "%USERPROFILE%\\python_projects\\dms-provider-bridge\\tmp\\bridge.stdout.log"
+            ]
+          },
+          {
+            "alternatives": [
+              "%APPDATA%\\Credential Broker\\logs\\broker-debug.log",
+              "%APPDATA%\\Credential Broker\\logs\\broker.log"
+            ]
+          },
+          {
+            "alternatives": [
+              "%APPDATA%\\DMS MCP\\logs\\mcp-debug.log",
+              "%APPDATA%\\DMS MCP\\logs\\mcp.log"
+            ]
+          },
+          {
+            "alternatives": [
+              "%APPDATA%\\DMS AI Client\\logs\\demi-debug.log",
+              "%APPDATA%\\DMS AI Client\\logs\\demi.log"
+            ]
+          },
           "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-init.log",
           "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-default-params.log",
           "%APPDATA%\\GHISLER\\Plugins\\wfx\\TcWfxPlugin\\logs\\wfx-status.log",

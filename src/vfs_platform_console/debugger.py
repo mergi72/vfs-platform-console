@@ -26,10 +26,24 @@ def debugger_command(packages: list[dict[str, Any]] | None = None) -> list[str]:
         raise FileNotFoundError(f"Debugger executable not found: {executable}")
     log_files: list[str] = []
     for source in sources:
-        if not isinstance(source, str):
-            raise ValueError("Debugger log source must be a string.")
-        for matched in glob.glob(source):
-            if Path(matched).is_file() and matched not in log_files:
+        if isinstance(source, str):
+            candidates = [Path(matched) for matched in glob.glob(source) if Path(matched).is_file()]
+        elif isinstance(source, dict) and isinstance(source.get("alternatives"), list):
+            alternatives = source["alternatives"]
+            if not all(isinstance(item, str) for item in alternatives):
+                raise ValueError("Debugger log source alternatives must be strings.")
+            candidates = [
+                Path(matched)
+                for alternative in alternatives
+                for matched in glob.glob(alternative)
+                if Path(matched).is_file()
+            ]
+            candidates = [max(candidates, key=lambda path: path.stat().st_mtime)] if candidates else []
+        else:
+            raise ValueError("Debugger log source must be a string or an alternatives object.")
+        for candidate in candidates:
+            matched = str(candidate)
+            if matched not in log_files:
                 log_files.append(matched)
     if not log_files:
         raise FileNotFoundError("No configured debugger log files were found.")
