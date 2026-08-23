@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -43,7 +44,7 @@ main{{padding:28px 5%}}.layout{{display:grid;grid-template-columns:minmax(420px,
 #overview tbody tr:hover,#overview tbody tr.selected{{background:#203a50}}#detail{{min-height:230px}}
 .card{{background:#18293a;border:1px solid #30465b;border-radius:8px;padding:20px}}
 .head{{display:flex;justify-content:space-between;gap:10px}}.kind{{color:#9fc5e8;text-transform:uppercase;font-size:.75rem}}
-.status{{font-weight:600}}.healthy{{color:#65df8a}}.offline,.unhealthy{{color:#ff7777}}.not_applicable{{color:#aebccc}}
+.status{{font-weight:600}}.healthy,.enabled,.connected{{color:#65df8a}}.offline,.unhealthy{{color:#ff7777}}.not_applicable{{color:#aebccc}}
 .meta{{display:grid;grid-template-columns:72px 1fr;gap:7px;margin:16px 0;font-size:.88rem}}.label{{color:#8fa4b8}}
 .value{{overflow-wrap:anywhere}}a{{color:#6db7ff;margin-right:14px}}
 @media(max-width:850px){{.layout{{grid-template-columns:1fr}}}}
@@ -68,7 +69,7 @@ fetch('/api/packages').then(r => r.json()).then(data => {{
     ${{p.loaded === undefined ? '' : `<span class=\"label\">Načten</span><span class=\"value\">${{p.loaded ? 'ano' : 'ne'}}</span>`}}
     <span class=\"label\">Endpoint</span><span class=\"value\">${{esc(p.base_url || 'lokální klient')}}</span>
     <span class=\"label\">Projekt</span><span class=\"value\">${{esc(p.project_path || 'externí balíček')}}</span></div>
-    ${{links(p)}}`;
+    ${{details(p)}}${{links(p)}}`;
   }};
   body.querySelectorAll('tr').forEach(row => row.addEventListener('click', () => show(Number(row.dataset.index))));
   if (data.packages.length) show(0);
@@ -79,6 +80,10 @@ function links(p) {{
   for (const [label,key] of [['Config','config_path'],['Docs','docs_path']]) if (p[key])
     out += `<a href=\"${{esc(p.base_url.replace(/[/]$/, '') + '/' + p[key].replace(/^[/]/, ''))}}\" target=\"_blank\" rel=\"noopener\">${{label}}</a>`;
   return out;
+}}
+function details(p) {{
+  if (!Array.isArray(p.details) || !p.details.length) return '';
+  return `<div class="meta">${{p.details.map(item => `<span class="label">${{esc(item.label)}}</span><span class="value">${{esc(p[item.key] ?? 'neuvedeno')}}</span>`).join('')}}</div>`;
 }}
 function formatStartedAt(value) {{
   if (!value) return 'nelze zjistit';
@@ -93,10 +98,13 @@ function formatStartedAt(value) {{
 def _package_status(package: dict[str, Any]) -> dict[str, Any]:
     result = dict(package)
     result.update(_installation_status(package.get("installation"), package.get("process_names")))
-    base_url = package.get("base_url")
+    result.update(_metadata_status(package.get("metadata")))
+    base_url = _health_base_url(package)
+    if base_url:
+        result["base_url"] = base_url
     health_path = package.get("health_path")
     if not isinstance(base_url, str) or not isinstance(health_path, str):
-        result["status"] = "not_applicable"
+        result["status"] = str(package.get("static_status", "not_applicable"))
         result["started_at"] = _named_process_started_at(package.get("process_names"))
         return result
     timeout = float(load_config().get("health", {}).get("timeout_seconds", 2.0))
@@ -111,6 +119,7 @@ def _package_status(package: dict[str, Any]) -> dict[str, Any]:
             except ValueError:
                 health = None
             if isinstance(health, dict):
+                _copy_response_fields(result, health, package.get("response_fields"))
                 version = health.get("version")
                 if isinstance(version, str) and version:
                     result["version"] = version
@@ -121,6 +130,60 @@ def _package_status(package: dict[str, Any]) -> dict[str, Any]:
             result["started_at"] = _process_started_at(base_url)
     except httpx.HTTPError:
         result["status"] = "offline"
+    return result
+
+
+def _health_base_url(package: dict[str, Any]) -> str | None:
+    base_url = package.get("base_url")
+    if isinstance(base_url, str) and base_url:
+        return base_url
+    url_file = package.get("health_url_file")
+    if not isinstance(url_file, str) or not url_file:
+        return None
+    try:
+        value = Path(url_file).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        return None
+    return value.rstrip("/")
+
+
+def _copy_response_fields(result: dict[str, Any], payload: dict[str, Any], mapping: Any) -> None:
+    if not isinstance(mapping, dict):
+        return
+    for target, source in mapping.items():
+        if not isinstance(target, str) or not isinstance(source, str):
+            continue
+        value: Any = payload
+        for part in source.split("."):
+            if isinstance(value, dict):
+                value = value.get(part)
+            elif isinstance(value, list) and part.isdigit() and int(part) < len(value):
+                value = value[int(part)]
+            else:
+                value = None
+                break
+        if value is not None:
+            result[target] = value
+
+
+def _metadata_status(metadata: Any) -> dict[str, Any]:
+    if not isinstance(metadata, dict):
+        return {}
+    path = metadata.get("path")
+    fields = metadata.get("fields")
+    if not isinstance(path, str) or not isinstance(fields, dict):
+        return {}
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"installed": False}
+    if not isinstance(payload, dict):
+        return {"installed": False}
+    result: dict[str, Any] = {"installed": True}
+    _copy_response_fields(result, payload, fields)
     return result
 
 

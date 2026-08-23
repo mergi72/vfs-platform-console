@@ -7,7 +7,7 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
-from vfs_platform_console.app import _package_status, create_app
+from vfs_platform_console.app import _metadata_status, _package_status, create_app
 from vfs_platform_console.config import load_config, load_packages
 from vfs_platform_console.debugger import debugger_command, main as debugger_main
 
@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.3"
+    assert settings["application"]["version"] == "0.3.4"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -28,6 +28,7 @@ def test_packages_are_enabled_and_ordered() -> None:
         "mcp",
         "demi",
         "vfs-dms-chatgpt-plugin",
+        "secure-mcp-tunnel",
         "tc-wfx",
     ]
     assert packages[0]["runtime"] == "VFS Logdy 0.18.1 / local web UI"
@@ -140,6 +141,45 @@ def test_package_status_uses_configured_process_for_local_client() -> None:
     process_start.assert_called_once_with(["TOTALCMD64", "TOTALCMD"])
 
 
+def test_plugin_version_is_loaded_from_manifest(tmp_path) -> None:
+    manifest = tmp_path / "plugin.json"
+    manifest.write_text('{"version":"0.1.1"}', encoding="utf-8")
+    status = _metadata_status({"path": str(manifest), "fields": {"version": "version"}})
+    assert status == {"installed": True, "version": "0.1.1"}
+
+
+def test_tunnel_status_uses_dynamic_local_health_url(tmp_path) -> None:
+    url_file = tmp_path / "tunnel.url"
+    url_file.write_text("http://127.0.0.1:53794\n", encoding="utf-8")
+    response = httpx.Response(
+        200,
+        json={
+            "version": "0.0.12",
+            "started_at": "2026-08-23T17:39:29+02:00",
+            "control_plane_tunnel_id": "tunnel_test",
+            "mcp_server_url": "http://127.0.0.1:8781/mcp",
+            "channels": [{"probe_status": "ok"}],
+        },
+    )
+    package = {
+        "health_url_file": str(url_file),
+        "health_path": "/api/status",
+        "response_fields": {
+            "tunnel_id": "control_plane_tunnel_id",
+            "target_url": "mcp_server_url",
+            "channel_status": "channels.0.probe_status",
+        },
+    }
+    with patch("vfs_platform_console.app.httpx.Client.get", return_value=response):
+        status = _package_status(package)
+    assert status["status"] == "healthy"
+    assert status["base_url"] == "http://127.0.0.1:53794"
+    assert status["version"] == "0.0.12"
+    assert status["tunnel_id"] == "tunnel_test"
+    assert status["target_url"] == "http://127.0.0.1:8781/mcp"
+    assert status["channel_status"] == "ok"
+
+
 def test_named_process_lookup_is_case_insensitive_for_windows_executable() -> None:
     process = type("Process", (), {"info": {"name": "TOTALCMD64.EXE", "create_time": 1_755_625_127.0}})()
     with patch("vfs_platform_console.app.psutil.process_iter", return_value=[process]):
@@ -173,7 +213,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.3" in response.text
+    assert "0.3.4" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text

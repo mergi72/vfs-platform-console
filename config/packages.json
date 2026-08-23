@@ -52,11 +52,48 @@
       "enabled": true,
       "kind": "plugin",
       "runtime": "OpenAI plugin / VFS MCP",
-      "version": "0.1.0",
       "project_path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin",
       "base_url": "http://127.0.0.1:8781/mcp",
+      "static_status": "enabled",
+      "mode": "read-only",
+      "metadata": {
+        "path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin\\.codex-plugin\\plugin.json",
+        "fields": {
+          "version": "version"
+        }
+      },
+      "details": [
+        {"label": "Režim", "key": "mode"},
+        {"label": "Závislost", "key": "depends_on"}
+      ],
       "depends_on": ["mcp"],
       "order": 45
+    },
+    {
+      "id": "secure-mcp-tunnel",
+      "name": "Secure MCP Tunnel",
+      "enabled": true,
+      "kind": "gateway",
+      "runtime": "OpenAI Secure MCP Tunnel",
+      "project_path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin\\tmp\\tunnel-client",
+      "health_url_file": "%USERPROFILE%\\.local\\state\\tunnel-client\\health\\vfs-dms-local.url",
+      "health_path": "/api/status",
+      "profile": "%APPDATA%\\tunnel-client\\vfs-dms-local.yaml",
+      "response_fields": {
+        "version": "version",
+        "started_at": "started_at",
+        "tunnel_id": "control_plane_tunnel_id",
+        "target_url": "mcp_server_url",
+        "channel_status": "channels.0.probe_status"
+      },
+      "details": [
+        {"label": "Tunnel", "key": "tunnel_id"},
+        {"label": "Kanál", "key": "channel_status"},
+        {"label": "Cíl", "key": "target_url"},
+        {"label": "Profil", "key": "profile"}
+      ],
+      "depends_on": ["mcp"],
+      "order": 46
     },
     {
       "id": "tc-wfx",
