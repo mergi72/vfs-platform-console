@@ -47,6 +47,18 @@
       "order": 40
     },
     {
+      "id": "vfs-dms-chatgpt-plugin",
+      "name": "VFS DMS for ChatGPT",
+      "enabled": true,
+      "kind": "plugin",
+      "runtime": "OpenAI plugin / VFS MCP",
+      "version": "0.1.0",
+      "project_path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin",
+      "base_url": "http://127.0.0.1:8781/mcp",
+      "depends_on": ["mcp"],
+      "order": 45
+    },
+    {
       "id": "tc-wfx",
       "name": "TC-WFX",
       "enabled": true,
