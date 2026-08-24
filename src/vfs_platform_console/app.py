@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -99,6 +101,7 @@ def _package_status(package: dict[str, Any]) -> dict[str, Any]:
     result = dict(package)
     result.update(_installation_status(package.get("installation"), package.get("process_names")))
     result.update(_metadata_status(package.get("metadata")))
+    _apply_version_probe(result, package.get("version_probe"))
     base_url = _health_base_url(package)
     if base_url:
         result["base_url"] = base_url
@@ -131,6 +134,49 @@ def _package_status(package: dict[str, Any]) -> dict[str, Any]:
     except httpx.HTTPError:
         result["status"] = "offline"
     return result
+
+
+def _apply_version_probe(result: dict[str, Any], probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    executable = probe.get("executable")
+    arguments = probe.get("arguments", [])
+    pattern = probe.get("pattern")
+    if not isinstance(executable, str) or not Path(executable).is_file():
+        return
+    if not isinstance(arguments, list) or not all(isinstance(item, str) for item in arguments):
+        return
+    if not isinstance(pattern, str) or not pattern:
+        return
+    try:
+        timeout = min(max(float(probe.get("timeout_seconds", 1.0)), 0.1), 5.0)
+        completed = subprocess.run(
+            [executable, *arguments],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            shell=False,
+        )
+        output = completed.stdout + "\n" + completed.stderr
+        match = re.search(pattern, output)
+    except (OSError, ValueError, subprocess.SubprocessError, re.error):
+        return
+    if match is None:
+        return
+    try:
+        version = match.group("version")
+    except (IndexError, KeyError):
+        return
+    result["version"] = version
+    runtime_template = probe.get("runtime_template")
+    if isinstance(runtime_template, str):
+        result["runtime"] = runtime_template.replace("{version}", version)
+    tag_template = probe.get("tag_template")
+    source = result.get("source")
+    if isinstance(tag_template, str) and isinstance(source, dict):
+        result["source"] = dict(source)
+        result["source"]["tag"] = tag_template.replace("{version}", version)
 
 
 def _health_base_url(package: dict[str, Any]) -> str | None:

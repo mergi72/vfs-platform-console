@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 from unittest.mock import patch
 
 import httpx
@@ -15,7 +16,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.7"
+    assert settings["application"]["version"] == "0.3.8"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -31,8 +32,9 @@ def test_packages_are_enabled_and_ordered() -> None:
         "secure-mcp-tunnel",
         "tc-wfx",
     ]
-    assert packages[0]["runtime"] == "VFS Logdy 0.18.8 / local web UI"
-    assert packages[0]["version"] == "0.18.8"
+    assert packages[0]["runtime"] == "VFS Logdy / local web UI"
+    assert "version" not in packages[0]
+    assert packages[0]["version_probe"]["arguments"] == ["--version"]
     assert packages[-1]["process_names"] == ["TOTALCMD64", "TOTALCMD"]
     assert packages[-1]["installation"]["registry_key"] == "TC-VFS"
     assert "%USERPROFILE%" not in packages[0]["project_path"]
@@ -170,6 +172,24 @@ def test_package_status_includes_health_version_and_process_start() -> None:
     assert status["started_at"] == "2026-08-19T18:00:00+00:00"
 
 
+def test_package_status_probes_binary_version() -> None:
+    package = {
+        "runtime": "Debugger",
+        "source": {"tag": "dynamic"},
+        "version_probe": {
+            "executable": sys.executable,
+            "arguments": ["--version"],
+            "pattern": r"Python\s+(?P<version>\d+\.\d+\.\d+)",
+            "runtime_template": "Python {version}",
+            "tag_template": "v{version}",
+        },
+    }
+    status = _package_status(package)
+    assert status["version"] == ".".join(str(part) for part in sys.version_info[:3])
+    assert status["runtime"] == f"Python {status['version']}"
+    assert status["source"]["tag"] == f"v{status['version']}"
+
+
 def test_package_status_uses_configured_process_for_local_client() -> None:
     with patch(
         "vfs_platform_console.app._named_process_started_at", return_value="2026-08-19T17:18:47+00:00"
@@ -252,7 +272,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.7" in response.text
+    assert "0.3.8" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text

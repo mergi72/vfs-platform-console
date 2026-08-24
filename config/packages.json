@@ -119,15 +119,22 @@
       "name": "VFS Debugger (Logdy)",
       "enabled": true,
       "kind": "debugger",
-      "runtime": "VFS Logdy 0.18.8 / local web UI",
-      "version": "0.18.8",
+      "runtime": "VFS Logdy / local web UI",
       "project_path": "%USERPROFILE%\\python_projects\\logdy-core",
       "base_url": "http://127.0.0.1:8801",
       "health_path": "/",
       "source": {
         "repository": "https://github.com/mergi72/logdy-core",
-        "tag": "v0.18.8",
+        "tag": "dynamic",
         "license": "Apache-2.0"
+      },
+      "version_probe": {
+        "executable": "%USERPROFILE%\\python_projects\\logdy-core\\bin\\logdy-vfs.exe",
+        "arguments": ["--version"],
+        "pattern": "version\\s+(?P<version>\\d+\\.\\d+\\.\\d+)",
+        "runtime_template": "VFS Logdy {version} / local web UI",
+        "tag_template": "v{version}",
+        "timeout_seconds": 2
       },
       "launch": {
         "executable": "%USERPROFILE%\\python_projects\\logdy-core\\bin\\logdy-vfs.exe",
