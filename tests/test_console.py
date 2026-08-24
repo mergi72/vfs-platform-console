@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.5"
+    assert settings["application"]["version"] == "0.3.6"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -31,8 +31,8 @@ def test_packages_are_enabled_and_ordered() -> None:
         "secure-mcp-tunnel",
         "tc-wfx",
     ]
-    assert packages[0]["runtime"] == "VFS Logdy 0.18.1 / local web UI"
-    assert packages[0]["version"] == "0.18.1"
+    assert packages[0]["runtime"] == "VFS Logdy 0.18.8 / local web UI"
+    assert packages[0]["version"] == "0.18.8"
     assert packages[-1]["process_names"] == ["TOTALCMD64", "TOTALCMD"]
     assert packages[-1]["installation"]["registry_key"] == "TC-VFS"
     assert "%USERPROFILE%" not in packages[0]["project_path"]
@@ -121,8 +121,11 @@ def test_logdy_layout_is_configured() -> None:
     arguments = debugger["launch"]["arguments"]
     configured_path = arguments[arguments.index("--config") + 1]
     assert configured_path.replace("\\", "/").endswith("/vfs-platform-console/config/logdy.json")
+    assert arguments[arguments.index("--max-message-count") + 1] == "10000"
+    assert arguments[arguments.index("--initial-message-count") + 1] == "1000"
     config_path = Path(__file__).resolve().parents[1] / "config" / "logdy.json"
     layout = json.loads(config_path.read_text(encoding="utf-8"))
+    assert layout["settings"]["maxMessages"] == 1000
     assert [column["name"] for column in layout["columns"]] == [
         "ID",
         "Čas",
@@ -248,7 +251,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.5" in response.text
+    assert "0.3.6" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
