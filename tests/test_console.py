@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.6"
+    assert settings["application"]["version"] == "0.3.7"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -144,6 +144,7 @@ def test_logdy_layout_is_configured() -> None:
     assert "date.getFullYear()" in parser
     assert "date.getMilliseconds()" in parser
     assert "JSON.parse(clean)" in parser
+    assert "typeof originalJson.msg === 'string' ? originalJson : JSON.parse(clean)" in parser
     assert "vfs-dms-local\\.log" in parser
     assert "? 'tunnel'" in parser
     assert "request_id" in parser
@@ -251,7 +252,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.6" in response.text
+    assert "0.3.7" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
