@@ -53,6 +53,7 @@
       "kind": "plugin",
       "runtime": "OpenAI plugin / VFS MCP",
       "project_path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin",
+      "debug_config_path": "%USERPROFILE%\\python_projects\\vfs-dms-chatgpt-plugin\\config\\plugin.json",
       "base_url": "http://127.0.0.1:8781/mcp",
       "static_status": "enabled",
       "mode": "read-only",

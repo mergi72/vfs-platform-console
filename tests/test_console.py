@@ -15,7 +15,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.4"
+    assert settings["application"]["version"] == "0.3.5"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -77,6 +77,36 @@ def test_debugger_command_chooses_newest_log_alternative(tmp_path) -> None:
     assert command == [str(executable), "follow", str(normal_log)]
 
 
+def test_debugger_command_loads_package_debug_config(tmp_path) -> None:
+    executable = tmp_path / "logdy.exe"
+    static_log = tmp_path / "bridge.log"
+    plugin_logs = tmp_path / "plugin-logs"
+    tunnel_log = plugin_logs / "vfs-dms-local.log"
+    plugin_config = tmp_path / "plugin.json"
+    executable.write_bytes(b"")
+    static_log.write_text("bridge", encoding="utf-8")
+    plugin_logs.mkdir()
+    tunnel_log.write_text("tunnel", encoding="utf-8")
+    plugin_config.write_text(
+        json.dumps({"debug": {"enable": True, "path": str(plugin_logs), "files": [tunnel_log.name]}}),
+        encoding="utf-8",
+    )
+    command = debugger_command(
+        [
+            {"kind": "plugin", "debug_config_path": str(plugin_config)},
+            {
+                "kind": "debugger",
+                "launch": {
+                    "executable": str(executable),
+                    "arguments": ["follow"],
+                    "log_sources": [str(static_log)],
+                },
+            },
+        ]
+    )
+    assert command == [str(executable), "follow", str(static_log), str(tunnel_log)]
+
+
 def test_debugger_launcher_hides_windows_console() -> None:
     with patch("vfs_platform_console.debugger.debugger_command", return_value=["logdy"]), patch(
         "vfs_platform_console.debugger.subprocess.run"
@@ -110,6 +140,11 @@ def test_logdy_layout_is_configured() -> None:
     assert "replace(/-debug\\.log$/i, '')" in parser
     assert "date.getFullYear()" in parser
     assert "date.getMilliseconds()" in parser
+    assert "JSON.parse(clean)" in parser
+    assert "vfs-dms-local\\.log" in parser
+    assert "? 'tunnel'" in parser
+    assert "request_id" in parser
+    assert "...ids" not in parser
     assert "return;" not in parser
 
 
@@ -213,7 +248,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.4" in response.text
+    assert "0.3.5" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text
