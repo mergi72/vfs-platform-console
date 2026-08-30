@@ -16,7 +16,7 @@ from vfs_platform_console.debugger import debugger_command, main as debugger_mai
 def test_default_config() -> None:
     settings = load_config()
     assert settings["application"]["name"] == "VFS Platform Console"
-    assert settings["application"]["version"] == "0.3.10"
+    assert settings["application"]["version"] == "0.3.11"
     assert settings["server"] == {"host": "127.0.0.1", "port": 8800}
 
 
@@ -128,6 +128,21 @@ def test_logdy_layout_is_configured() -> None:
     config_path = Path(__file__).resolve().parents[1] / "config" / "logdy.json"
     layout = json.loads(config_path.read_text(encoding="utf-8"))
     assert layout["settings"]["maxMessages"] == 1000
+    display_modes = layout["vfsUi"]["displayModes"]
+    assert display_modes["default"] == "operational"
+    assert display_modes["storageKey"] == "vfs-logdy-display-mode"
+    assert [
+        (mode["id"], mode["label"], mode["facet"], mode["values"])
+        for mode in display_modes["options"]
+    ] == [
+        (
+            "operational",
+            "INFO+",
+            "Level",
+            ["INFO", "WARN", "WARNING", "ERROR", "CRITICAL"],
+        ),
+        ("verbose", "ALL", "Level", []),
+    ]
     assert [column["name"] for column in layout["columns"]] == [
         "ID",
         "Čas",
@@ -272,7 +287,7 @@ def test_dashboard() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "VFS Platform Console" in response.text
-    assert "0.3.10" in response.text
+    assert "0.3.11" in response.text
     assert "127.0.0.1:8800" in response.text
     assert "● healthy" in response.text
     assert "fetch('/api/packages')" in response.text

@@ -1,5 +1,27 @@
 {
   "name": "VFS Platform Logs",
+  "vfsUi": {
+    "displayModes": {
+      "default": "operational",
+      "storageKey": "vfs-logdy-display-mode",
+      "options": [
+        {
+          "id": "operational",
+          "label": "INFO+",
+          "facet": "Level",
+          "values": ["INFO", "WARN", "WARNING", "ERROR", "CRITICAL"],
+          "description": "Hlavní provozní události, varování a chyby bez transportního šumu."
+        },
+        {
+          "id": "verbose",
+          "label": "ALL",
+          "facet": "Level",
+          "values": [],
+          "description": "Úplný diagnostický výpis včetně DEBUG, LOG a transportních zpráv."
+        }
+      ]
+    }
+  },
   "columns": [
     {
       "id": "correlation_id",
